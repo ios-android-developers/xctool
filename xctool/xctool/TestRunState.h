@@ -27,6 +27,8 @@
   NSMutableString *_outputBeforeTestsStart;
 }
 
+@property (nonatomic, retain, readonly) OCTestSuiteEventState *testSuiteState;
+
 - (instancetype)initWithTests:(NSArray *)testList
                     reporters:(NSArray *)reporters;
 

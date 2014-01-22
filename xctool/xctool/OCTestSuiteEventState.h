@@ -40,4 +40,6 @@
 - (unsigned int)testCount;
 - (unsigned int)totalFailures;
 
+- (void)publishEventsForFinishedTests;
+
 @end

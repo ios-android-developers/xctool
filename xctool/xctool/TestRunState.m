@@ -170,12 +170,9 @@
                                      @"Test crashed while running.\n\n%@",
                                      [self collectCrashReports:_crashReportsAtStart]];
   outputForCrashingTest = [outputForCrashingTest stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  NSString *outputForOtherTests = [NSString stringWithFormat:
-                                   @"Test did not run: the test bundle stopped running or crashed in '%@'.",
-                                   [[_testSuiteState runningTest] testName]];
 
   [[_testSuiteState runningTest] appendOutput:outputForCrashingTest];
-  [[_testSuiteState unstartedTests] makeObjectsPerformSelector:@selector(appendOutput:) withObject:outputForOtherTests];
+  [[_testSuiteState runningTest] publishEvents];
 }
 
 - (void)handleCrashAfterTest
@@ -185,12 +182,6 @@
   // something, but it could be a lot of things.
   NSAssert(_previousTestState != nil, @"We should have some info on the last test that ran.");
   NSUInteger previousTestStateIndex = [[_testSuiteState tests] indexOfObject:_previousTestState];
-
-  // We should annotate all tests that never ran.
-  [[_testSuiteState unstartedTests] makeObjectsPerformSelector:@selector(appendOutput:)
-                                                    withObject:[NSString stringWithFormat:
-                                                                @"Test did not run: the test bundle stopped running or crashed after running '%@'.",
-                                                                [_previousTestState testName]]];
 
   // Insert a place-holder test to hold information on the crash.
   NSString *fakeTestName = [NSString stringWithFormat:@"%@/%@_MAYBE_CRASHED",
@@ -220,6 +211,8 @@
     [self handleCrashBeforeAnyTestsRan];
   } else if (![_testSuiteState isFinished] && [_testSuiteState runningTest] != nil) {
     [self handleCrashDuringTest];
+    [_testSuiteState publishEventsForFinishedTests];
+    return;
   } else if (![_testSuiteState isFinished] &&
              [_testSuiteState runningTest] == nil) {
     [self handleCrashAfterTest];

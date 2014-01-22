@@ -67,28 +67,38 @@
   return total;
 }
 
-- (void)publishEvents
+- (void)publishEventsForTests:(NSArray *)tests
 {
   if (!_isStarted) {
     [self publishWithEvent:
-      EventDictionaryWithNameAndContent(kReporter_Events_BeginTestSuite,
-        @{kReporter_BeginTestSuite_SuiteKey:self.testName})
-    ];
+     EventDictionaryWithNameAndContent(kReporter_Events_BeginTestSuite,
+       @{kReporter_BeginTestSuite_SuiteKey:self.testName})
+     ];
     [self beginTestSuite];
   }
 
-  [_tests makeObjectsPerformSelector:@selector(publishEvents)];
+  [tests makeObjectsPerformSelector:@selector(publishEvents)];
 
-  if (!_isFinished) {
+  if (!_isFinished && [[self unstartedTests] count] == 0) {
     [self publishWithEvent:
-      EventDictionaryWithNameAndContent(kReporter_Events_EndTestSuite, @{
+     EventDictionaryWithNameAndContent(kReporter_Events_EndTestSuite, @{
         kReporter_EndTestSuite_SuiteKey:self.testName,
         kReporter_EndTestSuite_TotalDurationKey:@(self.duration),
         kReporter_EndTestSuite_TestCaseCountKey:@(self.testCount),
         kReporter_EndTestSuite_TotalFailureCountKey:@(self.totalFailures)
-    })];
+      })];
     [self endTestSuite];
   }
+}
+
+- (void)publishEventsForFinishedTests
+{
+  [self publishEventsForTests:[self finishedTests]];
+}
+
+- (void)publishEvents
+{
+  [self publishEventsForTests:[self tests]];
 }
 
 - (void)setReporters:(NSArray *)reporters
@@ -111,10 +121,14 @@
 
 - (void)addTestsFromArray:(NSArray *)tests
 {
-  [tests enumerateObjectsUsingBlock:^(NSString *testDesc, NSUInteger idx, BOOL *stop) {
-    OCTestEventState *state = [[OCTestEventState alloc] initWithInputName:testDesc];
-    [self addTest:state];
-    [state release];
+  [tests enumerateObjectsUsingBlock:^(id test, NSUInteger idx, BOOL *stop) {
+    if ([test isKindOfClass:[OCTestEventState class]]) {
+      [self addTest:test];
+    } else {
+      OCTestEventState *state = [[OCTestEventState alloc] initWithInputName:test];
+      [self addTest:state];
+      [state release];
+    }
   }];
 }
 
@@ -135,6 +149,13 @@
 {
   return [_tests filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL (OCTestEventState *test, NSDictionary *bindings) {
     return ![test isStarted];
+  }]];
+}
+
+- (NSArray *)finishedTests
+{
+  return [_tests filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL (OCTestEventState *test, NSDictionary *bindings) {
+    return [test isFinished];
   }]];
 }
 

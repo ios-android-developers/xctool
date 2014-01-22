@@ -53,6 +53,7 @@
 		3892D7541815A13400E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
 		3892D7551815A13400E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
 		3892D7561815A13400E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
+		CC32990C18905F4D00ACC8AD /* TestResultCounter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE9E73E217A7323B008A5ED2 /* TestResultCounter.m */; };
 		EE61734717E284DD00F02C91 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
 		EE61734817E284DD00F02C91 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
 		EE61734917E284DD00F02C91 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
@@ -529,6 +530,11 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0500;
+				TargetAttributes = {
+					2893A94B17960CD400EFBD28 = {
+						TestTargetID = 28F48A2117974D4100068E00;
+					};
+				};
 			};
 			buildConfigurationList = 2893A94117960CAD00EFBD28 /* Build configuration list for PBXProject "reporters" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -627,6 +633,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC32990C18905F4D00ACC8AD /* TestResultCounter.m in Sources */,
 				EE61734B17E284DD00F02C91 /* Reporter.m in Sources */,
 				28F48A2E17974D5400068E00 /* NSFileHandle+Print.m in Sources */,
 				28F48A2617974D4100068E00 /* main.m in Sources */,

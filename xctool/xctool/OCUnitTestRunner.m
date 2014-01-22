@@ -120,25 +120,42 @@
 
 - (BOOL)runTests
 {
-  TestRunState *testRunState = [[[TestRunState alloc] initWithTests:_focusedTestCases reporters:_reporters] autorelease];
+  BOOL allTestsPassed = true;
 
-  void (^feedOutputToBlock)(NSString *) = ^(NSString *line) {
-    NSData *lineData = [line dataUsingEncoding:NSUTF8StringEncoding];
+  while ([_focusedTestCases count]) {
+    TestRunState *testRunState = [[[TestRunState alloc] initWithTests:_focusedTestCases reporters:_reporters] autorelease];
 
-    [testRunState parseAndHandleEvent:line];
-    [_reporters makeObjectsPerformSelector:@selector(publishDataForEvent:) withObject:lineData];
-  };
+    void (^feedOutputToBlock)(NSString *) = ^(NSString *line) {
+      NSData *lineData = [line dataUsingEncoding:NSUTF8StringEncoding];
 
-  NSString *runTestsError = nil;
+      [testRunState parseAndHandleEvent:line];
+      [_reporters makeObjectsPerformSelector:@selector(publishDataForEvent:) withObject:lineData];
+    };
 
-  [testRunState prepareToRun];
+    NSString *runTestsError = nil;
 
-  [self runTestsAndFeedOutputTo:feedOutputToBlock
-                   startupError:&runTestsError];
+    [testRunState prepareToRun];
 
-  [testRunState didFinishRunWithStartupError:runTestsError];
+    [self runTestsAndFeedOutputTo:feedOutputToBlock
+                     startupError:&runTestsError];
 
-  return [testRunState allTestsPassed];
+    [testRunState didFinishRunWithStartupError:runTestsError];
+
+    allTestsPassed &= [testRunState allTestsPassed];
+
+    // update focused test cases
+    OCTestSuiteEventState *suiteState = [testRunState testSuiteState];
+    NSArray *unstartedTests = [suiteState unstartedTests];
+    NSMutableArray *unstartedTestCases = [[NSMutableArray alloc] initWithCapacity:[unstartedTests count]];
+    [unstartedTests enumerateObjectsUsingBlock:^(OCTestEventState *obj, NSUInteger idx, BOOL *stop) {
+      [unstartedTestCases addObject:[NSString stringWithFormat:@"%@/%@", obj.className, obj.methodName]];
+    }];
+
+    [_focusedTestCases release];
+    _focusedTestCases = unstartedTestCases;
+  }
+  
+  return allTestsPassed;
 }
 
 - (NSArray *)testArguments
