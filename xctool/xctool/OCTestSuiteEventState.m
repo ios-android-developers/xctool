@@ -67,7 +67,7 @@
   return total;
 }
 
-- (void)publishEventsForTests:(NSArray *)tests
+- (void)publishEventsForFinishedTests
 {
   if (!_isStarted) {
     [self publishWithEvent:
@@ -77,28 +77,42 @@
     [self beginTestSuite];
   }
 
-  [tests makeObjectsPerformSelector:@selector(publishEvents)];
+  [[self finishedTests] makeObjectsPerformSelector:@selector(publishEvents)];
 
   if (!_isFinished && [[self unstartedTests] count] == 0) {
     [self publishWithEvent:
      EventDictionaryWithNameAndContent(kReporter_Events_EndTestSuite, @{
-        kReporter_EndTestSuite_SuiteKey:self.testName,
-        kReporter_EndTestSuite_TotalDurationKey:@(self.duration),
-        kReporter_EndTestSuite_TestCaseCountKey:@(self.testCount),
-        kReporter_EndTestSuite_TotalFailureCountKey:@(self.totalFailures)
-      })];
+       kReporter_EndTestSuite_SuiteKey:self.testName,
+       kReporter_EndTestSuite_TotalDurationKey:@(self.duration),
+       kReporter_EndTestSuite_TestCaseCountKey:@(self.testCount),
+       kReporter_EndTestSuite_TotalFailureCountKey:@(self.totalFailures)
+    })];
     [self endTestSuite];
   }
 }
 
-- (void)publishEventsForFinishedTests
-{
-  [self publishEventsForTests:[self finishedTests]];
-}
-
 - (void)publishEvents
 {
-  [self publishEventsForTests:[self tests]];
+  if (!_isStarted) {
+    [self publishWithEvent:
+      EventDictionaryWithNameAndContent(kReporter_Events_BeginTestSuite,
+        @{kReporter_BeginTestSuite_SuiteKey:self.testName})
+    ];
+    [self beginTestSuite];
+  }
+
+  [[self tests] makeObjectsPerformSelector:@selector(publishEvents)];
+
+  if (!_isFinished) {
+    [self publishWithEvent:
+      EventDictionaryWithNameAndContent(kReporter_Events_EndTestSuite, @{
+        kReporter_EndTestSuite_SuiteKey:self.testName,
+        kReporter_EndTestSuite_TotalDurationKey:@(self.duration),
+        kReporter_EndTestSuite_TestCaseCountKey:@(self.testCount),
+        kReporter_EndTestSuite_TotalFailureCountKey:@(self.totalFailures)
+    })];
+    [self endTestSuite];
+  }
 }
 
 - (void)setReporters:(NSArray *)reporters
