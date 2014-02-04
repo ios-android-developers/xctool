@@ -19,6 +19,7 @@
 
 #import <QuartzCore/QuartzCore.h>
 
+#import "ReporterEvents.h"
 #import "ReportStatus.h"
 #import "TestRunState.h"
 #import "XcodeBuildSettings.h"
@@ -120,16 +121,19 @@
 
 - (BOOL)runTests
 {
-  BOOL allTestsPassed = true;
+  BOOL firstRun = YES;
+  BOOL allTestsPassed = YES;
 
-  while ([_focusedTestCases count]) {
-    TestRunState *testRunState = [[[TestRunState alloc] initWithTests:_focusedTestCases reporters:_reporters] autorelease];
+  OCTestSuiteEventState *testSuiteState = [[OCTestSuiteEventState alloc] initWithName:kReporter_TestSuite_TopLevelSuiteName
+                                                                            reporters:_reporters];
+
+  [testSuiteState addTestsFromArray:_focusedTestCases];
+
+  while (firstRun || [[testSuiteState unstartedTests] count]) {
+    TestRunState *testRunState = [[[TestRunState alloc] initWithTestSuiteEventState:testSuiteState] autorelease];
 
     void (^feedOutputToBlock)(NSString *) = ^(NSString *line) {
-      NSData *lineData = [line dataUsingEncoding:NSUTF8StringEncoding];
-
       [testRunState parseAndHandleEvent:line];
-      [_reporters makeObjectsPerformSelector:@selector(publishDataForEvent:) withObject:lineData];
     };
 
     NSString *runTestsError = nil;
@@ -153,6 +157,8 @@
 
     [_focusedTestCases release];
     _focusedTestCases = unstartedTestCases;
+
+    firstRun = NO;
   }
   
   return allTestsPassed;

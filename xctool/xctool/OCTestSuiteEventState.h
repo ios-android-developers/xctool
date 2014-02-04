@@ -28,17 +28,21 @@
 - (instancetype)initWithName:(NSString *)name
                    reporters:(NSArray *)reporters;
 
-- (void)beginTestSuite;
-- (void)endTestSuite;
-- (double)duration;
+- (void)beginTestSuite:(NSDictionary *)event;
+- (void)endTestSuite:(NSDictionary *)event;
 - (void)insertTest:(OCTestEventState *)test atIndex:(NSUInteger)index;
 - (void)addTest:(OCTestEventState *)test;
 - (void)addTestsFromArray:(NSArray *)tests;
 - (OCTestEventState *)runningTest;
 - (NSArray *)unstartedTests;
+- (NSArray *)finishedTests;
+- (NSArray *)unfinishedTests;
 - (OCTestEventState *)getTestWithTestName:(NSString *)name;
 - (unsigned int)testCount;
 - (unsigned int)totalFailures;
+- (unsigned int)totalErrors;
+- (double)testDuration;
+- (double)totalDuration;
 
 - (void)publishEventsForFinishedTests;
 

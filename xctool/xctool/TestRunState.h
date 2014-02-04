@@ -32,6 +32,8 @@
 - (instancetype)initWithTests:(NSArray *)testList
                     reporters:(NSArray *)reporters;
 
+- (instancetype)initWithTestSuiteEventState:(OCTestSuiteEventState *)suiteState;
+
 - (BOOL)allTestsPassed;
 - (void)prepareToRun;
 - (void)didFinishRunWithStartupError:(NSString *)startupError;

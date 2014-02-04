@@ -97,7 +97,7 @@ static TestRunState *TestRunStateForFakeRun(id<EventSink> sink)
                 toReporter:state];
   [state didFinishRunWithStartupError:nil];
 
-  assertThat(eventBuffer.events, hasCountOf(0));
+  assertThat(eventBuffer.events, hasCountOf(16));
 }
 
 - (void)testCrashBeforeTestsRan
@@ -148,7 +148,8 @@ static TestRunState *TestRunStateForFakeRun(id<EventSink> sink)
   // Send the 'begin-test-suite' event, but stop before the first test.
   testCrashBeforeTestsRan([@[outputBeforeTests] arrayByAddingObjectsFromArray:
                            [EventsForFakeRun() subarrayWithRange:NSMakeRange(0, 1)]],
-                          @[kReporter_Events_BeginTest,
+                          @[kReporter_Events_BeginTestSuite,
+                            kReporter_Events_BeginTest,
                             kReporter_Events_TestOuput,
                             kReporter_Events_EndTest,
                             kReporter_Events_BeginTest,
@@ -171,20 +172,16 @@ static TestRunState *TestRunStateForFakeRun(id<EventSink> sink)
   [state didFinishRunWithStartupError:nil];
 
   assertThat(SelectEventFields(eventBuffer.events, nil, @"event"),
-             equalTo(@[kReporter_Events_TestOuput,
-                       kReporter_Events_EndTest,
+             equalTo(@[kReporter_Events_BeginTestSuite,
                        kReporter_Events_BeginTest,
                        kReporter_Events_TestOuput,
-                       kReporter_Events_EndTest,
-                       kReporter_Events_EndTestSuite]));
+                       kReporter_Events_EndTest]));
 
   assertThat(SelectEventFields(eventBuffer.events, kReporter_Events_EndTest, kReporter_EndTest_TestKey),
-             equalTo(@[@"-[OtherTests testSomething]",
-                       @"-[OtherTests testAnother]"]));
+             equalTo(@[@"-[OtherTests testSomething]"]));
 
   NSArray *output = SelectEventFields(eventBuffer.events, kReporter_Events_TestOuput, kReporter_TestOutput_OutputKey);
   assertThat(output[0], equalTo(@"Test crashed while running."));
-  assertThat(output[1], equalTo(@"Test did not run: the test bundle stopped running or crashed in '-[OtherTests testSomething]'."));
 }
 
 - (void)testCrashedAfterFirstTestFinishes
@@ -198,24 +195,27 @@ static TestRunState *TestRunStateForFakeRun(id<EventSink> sink)
   [state didFinishRunWithStartupError:nil];
 
   assertThat(SelectEventFields(eventBuffer.events, nil, @"event"),
-             equalTo(@[kReporter_Events_BeginTest,
-                       kReporter_Events_TestOuput,
+             equalTo(@[kReporter_Events_BeginTestSuite,
+                       kReporter_Events_BeginTest,
                        kReporter_Events_EndTest,
                        kReporter_Events_BeginTest,
                        kReporter_Events_TestOuput,
+                       kReporter_Events_EndTest,
+                       kReporter_Events_BeginTest,
                        kReporter_Events_EndTest,
                        kReporter_Events_EndTestSuite]));
 
   // A "fake" test gets inserted to advertise the failure.
   assertThat(SelectEventFields(eventBuffer.events, kReporter_Events_EndTest, kReporter_EndTest_TestKey),
-             equalTo(@[@"-[OtherTests testSomething_MAYBE_CRASHED]",
+             equalTo(@[@"-[OtherTests testSomething]",
+                       @"-[OtherTests testSomething_MAYBE_CRASHED]",
                        @"-[OtherTests testAnother]"]));
 
   NSArray *output = SelectEventFields(eventBuffer.events, kReporter_Events_TestOuput, kReporter_TestOutput_OutputKey);
+  assertThat(output, hasCountOf(1));
   assertThat(output[0],
              equalTo(@"The test bundle stopped running or crashed immediately after running '-[OtherTests testSomething]'.  "
                      @"Even though that test finished, it's likely responsible for the crash."));
-  assertThat(output[1], equalTo(@"Test did not run: the test bundle stopped running or crashed after running '-[OtherTests testSomething]'."));
 }
 
 - (void)testTestsNeverRanBecauseOfStartupError
@@ -267,16 +267,24 @@ static TestRunState *TestRunStateForFakeRun(id<EventSink> sink)
   // In this case there are no tests left with which to report the error, so we
   // create a fake one just so we have a place to advertise the error.
   assertThat(SelectEventFields(eventBuffer.events, nil, @"event"),
-             equalTo(@[kReporter_Events_BeginTest,
+             equalTo(@[kReporter_Events_BeginTestSuite,
+                       kReporter_Events_BeginTest,
+                       kReporter_Events_EndTest,
+                       kReporter_Events_BeginTest,
+                       kReporter_Events_EndTest,
+                       kReporter_Events_BeginTest,
                        kReporter_Events_TestOuput,
                        kReporter_Events_EndTest,
                        kReporter_Events_EndTestSuite]));
 
   // A "fake" test gets inserted to advertise the failure.
   assertThat(SelectEventFields(eventBuffer.events, kReporter_Events_EndTest, kReporter_EndTest_TestKey),
-             equalTo(@[@"-[OtherTests testAnother_MAYBE_CRASHED]"]));
+             equalTo(@[@"-[OtherTests testSomething]",
+                       @"-[OtherTests testAnother]",
+                       @"-[OtherTests testAnother_MAYBE_CRASHED]"]));
 
   NSArray *output = SelectEventFields(eventBuffer.events, kReporter_Events_TestOuput, kReporter_TestOutput_OutputKey);
+  assertThat(output, hasCountOf(1));
   assertThat(output[0],
              equalTo(@"The test bundle stopped running or crashed immediately after running '-[OtherTests testAnother]'.  "
                      @"Even though that test finished, it's likely responsible for the crash."));
@@ -292,8 +300,8 @@ static TestRunState *TestRunStateForFakeRun(id<EventSink> sink)
         toReporter:state];
   [state didFinishRunWithStartupError:nil];
 
-  // Not much we can do here, make sure no events are shipped out
-  assertThatInteger(eventBuffer.events.count, equalToInteger(0));
+  // Not much we can do here, make sure all needed events are shipped out and nothing else
+  assertThatInteger(eventBuffer.events.count, equalToInteger(6));
 }
 
 @end

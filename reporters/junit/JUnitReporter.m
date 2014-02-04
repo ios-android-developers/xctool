@@ -1,7 +1,6 @@
 #import "JUnitReporter.h"
 
 #import "ReporterEvents.h"
-#import "TestResultCounter.h"
 
 #pragma mark Constants
 #define kJUnitReporter_Suite_Event @"event"
@@ -10,12 +9,9 @@
 #pragma mark Private Interface
 @interface JUnitReporter ()
 
-@property (nonatomic, retain) NSMutableDictionary *testSuitesInfo;
 @property (nonatomic, retain) NSMutableArray *testSuites;
 @property (nonatomic, retain) NSMutableArray *testResults;
 @property (nonatomic, retain) NSDateFormatter *formatter;
-
-@property (nonatomic, retain) TestResultCounter *resultCounter;
 @property (nonatomic) int totalTests;
 @property (nonatomic) int totalFailures;
 @property (nonatomic) int totalErrors;
@@ -33,10 +29,7 @@
     self.formatter = [[[NSDateFormatter alloc] init] autorelease];
     [_formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZZZZ"];
 
-    _testSuitesInfo = [[NSMutableDictionary alloc] init];
     self.testSuites = [NSMutableArray array];
-
-    _resultCounter = [[TestResultCounter alloc] init];
     self.totalTests = 0;
     self.totalFailures = 0;
     self.totalErrors = 0;
@@ -47,11 +40,9 @@
 
 - (void)dealloc
 {
-  [_testSuitesInfo release];
   self.testSuites = nil;
   self.testResults = nil;
   self.formatter = nil;
-  [_resultCounter release];
   [super dealloc];
 }
 
@@ -59,58 +50,27 @@
 
 - (void)beginTestSuite:(NSDictionary *)event
 {
-  NSString *suite = event[kReporter_BeginTestSuite_SuiteKey];
-
-  if (self.testSuitesInfo[suite]) {
-    return;
-  }
-
-  self.testSuitesInfo[suite] = @{kReporter_TimestampKey: event[kReporter_TimestampKey]};
   self.testResults = [NSMutableArray array];
-
-  [_resultCounter suiteBegin];
 }
 
 - (void)endTest:(NSDictionary *)event
 {
-  NSString *result = event[kReporter_EndTest_ResultKey];
   [self.testResults addObject:event];
-
-  if ([result isEqualToString:@"success"]) {
-    [_resultCounter testPassed];
-  } else if ([result isEqualToString:@"failure"]) {
-    [_resultCounter testFailed];
-  } else {
-    [_resultCounter testErrored];
-  }
 }
 
 - (void)endTestSuite:(NSDictionary *)event
 {
-  NSString *suite = event[kReporter_BeginTestSuite_SuiteKey];
-  [_resultCounter suiteEnd];
-
   if (self.testResults) { // Prevents nested suites
-    float testSuiteDuration = [event[kReporter_TimestampKey] doubleValue] - [self.testSuitesInfo[suite][kReporter_TimestampKey] doubleValue];
-    self.totalTests += [_resultCounter suiteTotal];
-    self.totalFailures += [_resultCounter suiteFailed];
-    self.totalErrors += [_resultCounter suiteErrored];
-    self.totalTime += testSuiteDuration;
-
-    NSMutableDictionary *updatedEvent = [event mutableCopy];
-    updatedEvent[kReporter_EndTestSuite_TestCaseCountKey] = @([_resultCounter suiteTotal]);
-    updatedEvent[kReporter_EndTestSuite_TotalFailureCountKey] = @([_resultCounter suiteFailed]);
-    updatedEvent[kReporter_EndTestSuite_UnexpectedExceptionCountKey] = @([_resultCounter suiteErrored]);
-    updatedEvent[kReporter_EndTestSuite_TotalDurationKey] = @(testSuiteDuration);
+    self.totalTests += [event[kReporter_EndTestSuite_TestCaseCountKey] intValue];
+    self.totalFailures += [event[kReporter_EndTestSuite_TotalFailureCountKey] intValue];
+    self.totalErrors += [event[kReporter_EndTestSuite_UnexpectedExceptionCountKey] intValue];
+    self.totalTime += [event[kReporter_EndTestSuite_TotalDurationKey] floatValue];
     [self.testSuites addObject:@{
-      kJUnitReporter_Suite_Event: updatedEvent,
+      kJUnitReporter_Suite_Event: event,
       kJUnitReporter_Suite_Results: self.testResults
     }];
-    [updatedEvent release];
     self.testResults = nil;
   }
-
-  [self.testSuitesInfo removeObjectForKey:suite];
 }
 
 - (void)didFinishReporting

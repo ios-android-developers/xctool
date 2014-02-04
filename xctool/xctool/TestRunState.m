@@ -39,6 +39,17 @@
   return self;
 }
 
+- (instancetype)initWithTestSuiteEventState:(OCTestSuiteEventState *)suiteState
+{
+  self = [super init];
+  if (self) {
+    _testSuiteState = [suiteState retain];
+    _outputBeforeTestsStart = [[NSMutableString alloc] init];
+  }
+  return self;
+}
+
+
 - (void)dealloc
 {
   [_testSuiteState release];
@@ -72,6 +83,11 @@
   _crashReportsAtStart = [[NSSet setWithArray:[self collectCrashReportPaths]] retain];
 }
 
+- (void)publishEvenToReporters:(NSDictionary *)event
+{
+  PublishEventToReporters(_testSuiteState.reporters, event);
+}
+
 - (void)outputBeforeTestBundleStarts:(NSDictionary *)event
 {
   [_outputBeforeTestsStart appendString:event[kReporter_OutputBeforeTestBundleStarts_OutputKey]];
@@ -79,12 +95,13 @@
 
 - (void)beginTestSuite:(NSDictionary *)event
 {
-  NSAssert(![_testSuiteState isStarted], @"Test suite already started!");
   NSAssert([event[kReporter_BeginTestSuite_SuiteKey] isEqualTo:kReporter_TestSuite_TopLevelSuiteName],
            @"Expected to begin test suite `%@', got `%@'",
            kReporter_TestSuite_TopLevelSuiteName, event[kReporter_BeginTestSuite_SuiteKey]);
 
-  [_testSuiteState beginTestSuite];
+  if ([_testSuiteState isStarted]) return;
+
+  [_testSuiteState beginTestSuite:event];
 }
 
 - (void)beginTest:(NSDictionary *)event
@@ -94,6 +111,8 @@
   OCTestEventState *state = [_testSuiteState getTestWithTestName:testName];
   NSAssert(state, @"Can't find test state for '%@', check senTestList", testName);
   [state stateBeginTest];
+
+  [self publishEvenToReporters:event];
 }
 
 - (void)endTest:(NSDictionary *)event
@@ -111,11 +130,13 @@
     _previousTestState = nil;
   }
   _previousTestState = [state retain];
+
+  [self publishEvenToReporters:event];
 }
 
 - (void)endTestSuite:(NSDictionary *)event
 {
-  [_testSuiteState endTestSuite];
+  [_testSuiteState endTestSuite:event];
 }
 
 - (void)testOutput:(NSDictionary *)event

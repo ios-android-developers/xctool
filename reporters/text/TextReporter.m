@@ -50,8 +50,6 @@ static NSString *abbreviatePath(NSString *string) {
 @property (nonatomic, retain) NSFileHandle *outputHandle;
 @property (nonatomic, retain) NSString *lastLineUpdate;
 
-@property (nonatomic, retain) NSMutableDictionary *testSuitesInfo;
-
 - (id)initWithOutputHandle:(NSFileHandle *)outputHandle;
 
 @end
@@ -64,7 +62,6 @@ static NSString *abbreviatePath(NSString *string) {
     self.outputHandle = outputHandle;
     _indent = 0;
     _savedIndent = -1;
-    _testSuitesInfo = [[NSMutableDictionary alloc] init];
   }
   return self;
 }
@@ -72,7 +69,6 @@ static NSString *abbreviatePath(NSString *string) {
 - (void)dealloc
 {
   self.outputHandle = nil;
-  [_testSuitesInfo release];
   [super dealloc];
 }
 
@@ -641,13 +637,6 @@ static NSString *abbreviatePath(NSString *string) {
 - (void)beginTestSuite:(NSDictionary *)event
 {
   NSString *suite = event[kReporter_BeginTestSuite_SuiteKey];
-
-  if (self.reportWriter.testSuitesInfo[suite]) {
-    return;
-  }
-
-  self.reportWriter.testSuitesInfo[suite] = @{kReporter_TimestampKey: event[kReporter_TimestampKey]};
-
   [_resultCounter suiteBegin];
 
   if (![suite isEqualToString:kReporter_TestSuite_TopLevelSuiteName] && ![suite hasSuffix:@".octest(Tests)"]) {
@@ -665,15 +654,13 @@ static NSString *abbreviatePath(NSString *string) {
   NSString *suite = event[kReporter_EndTestSuite_SuiteKey];
   [_resultCounter suiteEnd];
 
-  float testSuiteDuration = [event[kReporter_TimestampKey] doubleValue] - [self.reportWriter.testSuitesInfo[suite][kReporter_TimestampKey] doubleValue];
-
   if (![suite isEqualToString:kReporter_TestSuite_TopLevelSuiteName] && ![suite hasSuffix:@".octest(Tests)"]) {
     [self.reportWriter printLine:@"<bold>%lu passed, %lu failed, %lu errored, %lu total %@<reset>",
       [_resultCounter suitePassed],
       [_resultCounter suiteFailed],
       [_resultCounter suiteErrored],
       [_resultCounter suiteTotal],
-     [self formattedTestDuration:testSuiteDuration withColor:NO]
+     [self formattedTestDuration:[event[kReporter_EndTestSuite_TotalDurationKey] floatValue] withColor:NO]
      ];
     [self.reportWriter decreaseIndent];
   } else if ([suite isEqualToString:kReporter_TestSuite_TopLevelSuiteName] && [_resultCounter suiteTotal] > 0) {
@@ -682,11 +669,9 @@ static NSString *abbreviatePath(NSString *string) {
       [_resultCounter suiteFailed],
       [_resultCounter suiteErrored],
       [_resultCounter suiteTotal],
-     [self formattedTestDuration:testSuiteDuration withColor:NO]
+     [self formattedTestDuration:[event[kReporter_EndTestSuite_TotalDurationKey] floatValue] withColor:NO]
      ];
   }
-
-  [self.reportWriter.testSuitesInfo removeObjectForKey:suite];
 }
 
 - (void)beginTest:(NSDictionary *)event
