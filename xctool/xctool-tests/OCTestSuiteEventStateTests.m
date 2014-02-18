@@ -23,15 +23,15 @@
 #import "ReporterEvents.h"
 #import "TestUtil.h"
 
-static NSDictionary * BeginEventForTestSuiteWithTestName(NSString * testName)
+static NSDictionary *BeginEventForTestSuiteWithTestName(NSString * testName)
 {
   return EventDictionaryWithNameAndContent(kReporter_Events_BeginTestSuite,
                                            @{kReporter_BeginTestSuite_SuiteKey:testName});
 }
 
-static NSDictionary * EndEventForTestSuiteWithTestName(NSString * testName)
+static NSDictionary *EndEventForTestSuiteWithTestName(NSString * testName)
 {
-  return EventDictionaryWithNameAndContent(kReporter_Events_BeginTestSuite,
+  return EventDictionaryWithNameAndContent(kReporter_Events_EndTestSuite,
                                            @{kReporter_EndTestSuite_SuiteKey:testName});
 }
 
